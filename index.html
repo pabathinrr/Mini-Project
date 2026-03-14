@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal | UCSC Athletics</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+        :root {
+            --bg-base: #09090b;
+            --card-bg: rgba(24, 24, 27, 0.75);
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #09090b;
+            background-image:
+                radial-gradient(ellipse at 10% 0%, rgba(99,102,241,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 80%, rgba(16,185,129,0.08) 0%, transparent 50%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px 80px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 1100px; width: 100%; }
+
+        /* ---- TOAST ---- */
+        #toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: #1e293b; color: var(--text-main);
+            padding: 14px 28px; border-radius: 50px;
+            font-size: 0.9em; font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s;
+            opacity: 0; z-index: 9999; white-space: nowrap;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        #toast.success { border-color: var(--accent); }
+        #toast.error { border-color: var(--danger); }
+
+        /* ---- HEADER ---- */
+        .header { text-align: center; margin-bottom: 60px; animation: fadeInDown 0.8s ease-out; }
+        .header img { height: 90px; margin-bottom: 20px; filter: drop-shadow(0 0 16px rgba(99,102,241,0.4)); }
+        .header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2.2em, 6vw, 3.8em);
+            margin: 0; font-weight: 800;
+            background: linear-gradient(120deg, #818cf8 0%, #c084fc 50%, #38bdf8 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p { color: var(--text-muted); font-size: 1.1em; margin-top: 10px; }
+
+        /* ---- SEARCH BAR ---- */
+        .search-bar-wrap { margin-bottom: 24px; position: relative; }
+        .search-bar-wrap input {
+            width: 100%; padding: 14px 20px 14px 48px;
+            background: var(--card-bg); backdrop-filter: blur(10px);
+            border: 1px solid var(--border); border-radius: 14px;
+            color: var(--text-main); font-size: 1em; font-family: 'DM Sans', sans-serif;
+            transition: border-color 0.3s;
+        }
+        .search-bar-wrap input:focus { outline: none; border-color: var(--primary); }
+        .search-bar-wrap input::placeholder { color: var(--text-muted); }
+        .search-icon {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 1.1em; pointer-events: none;
+        }
+
+        /* ---- SECTION TITLES ---- */
+        h2 {
+            font-family: 'Syne', sans-serif;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px; margin-top: 55px;
+            color: var(--text-main); font-weight: 400;
+            letter-spacing: 2px; text-transform: uppercase; font-size: 1em;
+        }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+
+        /* ---- CARDS ---- */
+        .card {
+            background: var(--card-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--border); border-radius: 20px; padding: 28px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            transition: transform 0.35s, border-color 0.35s, box-shadow 0.35s;
+            animation: fadeInUp 0.5s ease-out forwards; opacity: 0;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(99,102,241,0.4);
+            box-shadow: 0 12px 40px rgba(99,102,241,0.15);
+        }
+        .card h3 { margin: 0 0 14px; font-family: 'Syne', sans-serif; font-size: 1.4em; font-weight: 700; }
+        .card p { margin: 6px 0; color: var(--text-muted); font-size: 0.92em; }
+        .card p span { color: var(--text-main); }
+
+        /* ---- BUTTONS ---- */
+        .btn {
+            display: block; width: 100%;
+            padding: 13px 18px; border-radius: 12px;
+            border: none; cursor: pointer;
+            font-family: 'DM Sans', sans-serif; font-weight: 600;
+            font-size: 0.88em; letter-spacing: 0.5px;
+            text-transform: uppercase; transition: filter 0.25s, transform 0.2s;
+            margin-top: 14px; color: white;
+        }
+        .btn:hover:not(:disabled) { filter: brightness(1.2); transform: translateY(-1px); }
+        .btn:disabled { background: #1e293b !important; color: #475569 !important; cursor: not-allowed; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); }
+        .btn-accent { background: linear-gradient(135deg, #10b981, #059669); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        .btn-row .btn { margin-top: 0; }
+
+        /* ---- BADGE ---- */
+        .badge {
+            display: inline-block; padding: 5px 14px;
+            border-radius: 20px; font-size: 0.82em; font-weight: 700;
+            background: rgba(16,185,129,0.15); color: var(--accent);
+            border: 1px solid rgba(16,185,129,0.4);
+        }
+        .badge.out { background: rgba(239,68,68,0.15); color: var(--danger); border-color: rgba(239,68,68,0.4); }
+
+        /* ---- GALLERY ---- */
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 20px; }
+        .gallery-item {
+            border-radius: 16px; overflow: hidden; height: 190px;
+            border: 1px solid var(--border); cursor: zoom-in; transition: transform 0.35s, border-color 0.35s;
+            background: #1e293b;
+        }
+        .gallery-item:hover { transform: scale(1.03); border-color: var(--primary); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.4s; filter: brightness(0.8); }
+        .gallery-item:hover img { filter: brightness(1.05); }
+        .gallery-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 0.85em; }
+
+        /* ---- ZOOM ---- */
+        #zoomOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            display: none; justify-content: center; align-items: center;
+            z-index: 3000; cursor: zoom-out; backdrop-filter: blur(6px);
+        }
+        #zoomOverlay img { max-width: 90%; max-height: 90%; border-radius: 12px; box-shadow: 0 0 80px rgba(0,0,0,0.6); }
+
+        /* ---- MODAL ---- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.35s; z-index: 2000;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: linear-gradient(160deg, #1e293b, #0f172a);
+            width: 90%; max-width: 520px; border-radius: 24px;
+            padding: 40px; border: 1px solid rgba(255,255,255,0.1);
+            transform: scale(0.9); transition: transform 0.35s;
+            max-height: 90vh; overflow-y: auto;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-close {
+            float: right; background: rgba(255,255,255,0.08); color: white;
+            border: none; width: 34px; height: 34px; border-radius: 50%;
+            font-size: 1em; cursor: pointer; line-height: 34px; text-align: center;
+            transition: background 0.2s;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.18); }
+        .detail-row { display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+        .detail-label { font-weight: 600; color: var(--text-muted); font-size: 0.9em; }
+        .detail-value { font-weight: 500; color: var(--text-main); text-align: right; font-size: 0.9em; }
+        .member-list {
+            background: rgba(0,0,0,0.25); padding: 14px 16px;
+            border-radius: 12px; font-family: monospace;
+            color: var(--text-main); line-height: 1.7;
+            border: 1px solid var(--border); margin-top: 8px;
+            font-size: 0.88em;
+        }
+
+        /* ---- EMPTY STATE ---- */
+        .empty-state { grid-column: 1/-1; text-align: center; padding: 50px 20px; color: var(--text-muted); }
+        .empty-state .emoji { font-size: 3em; display: block; margin-bottom: 12px; }
+
+        /* ---- ANIMATIONS ---- */
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-24px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ---- RESPONSIVE ---- */
+        @media (max-width: 600px) {
+            body { padding: 24px 14px 60px; }
+            .grid { grid-template-columns: 1fr; }
+            .gallery-grid { grid-template-columns: 1fr 1fr; }
+            .modal-content { padding: 28px 20px; }
+            .header img { height: 65px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="zoomOverlay" onclick="this.style.display='none'">
+    <img id="zoomedImg" src="" alt="Zoomed View">
+</div>
+
+<div id="toast"></div>
+
+<div class="container">
+    <div class="header">
+        <img src="logo.png" alt="UCSC Logo" onerror="this.style.display='none'">
+        <h1>UCSC Athletics</h1>
+        <p>Elevate your game. Book equipment. View schedules.</p>
+    </div>
+
+    <h2>🏆 Live Sport Directory</h2>
+    <div class="search-bar-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="sportSearch" placeholder="Search by sport name or venue..." oninput="renderData()">
+    </div>
+    <div id="sportList" class="grid"></div>
+
+    <h2>🏸 Armory &amp; Equipment</h2>
+    <div id="equipmentList" class="grid"></div>
+
+    <h2>📅 Upcoming Events & Match Results</h2>
+    <div id="eventsList" class="grid" style="margin-bottom: 40px;"></div>
+
+    <h2>📸 Action Gallery</h2>
+    <div id="photoAlbum" class="gallery-grid"></div>
+</div>
+
+<div class="modal-overlay" id="sportModal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        <h2 id="modalSportName" style="margin-top:0; border:none; font-family:'Syne',sans-serif; font-size:2em; color:var(--primary); clear:both;">—</h2>
+        <p id="modalTeamName" style="color:var(--accent); margin-top:-16px; margin-bottom:22px; font-weight:700; text-transform:uppercase; font-size:0.88em; letter-spacing:1px;"></p>
+
+        <div class="detail-row"><span class="detail-label">👑 Captain</span><span class="detail-value" id="modalCaptain"></span></div>
+        <div class="detail-row"><span class="detail-label">📋 Coach</span><span class="detail-value" id="modalCoach"></span></div>
+        <div class="detail-row"><span class="detail-label">✉️ Contact</span><span class="detail-value" id="modalContact"></span></div>
+        <div class="detail-row"><span class="detail-label">⏰ Practice</span><span class="detail-value" id="modalTime"></span></div>
+        <div class="detail-row"><span class="detail-label">📍 Venue</span><span class="detail-value" id="modalVenue"></span></div>
+
+        <div style="margin-top:20px;">
+            <span class="detail-label" style="display:block; margin-bottom:8px;">👥 Active Roster:</span>
+            <div id="modalMembers" class="member-list">—</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ─── Photo config ────────────────────────────────────────────────
+    const albumPhotos = [
+        "images/cricket.jpg",
+        "images/badminton.jpg",
+        "images/football.jpg",
+        "images/basketball.jpg"
+    ];
+
+    // ─── Default seed data ───────────────────────────────────────────
+    const defaultData = {
+        sports: [
+            {
+                name: "Cricket", teamName: "UCSC Strikers",
+                captain: "Kamal Perera", coach: "Not Assigned",
+                contact: "cricket@ucsc.cmb.ac.lk",
+                venue: "University Grounds", time: "Tuesdays 4:00 PM",
+                members: ["Kamal", "Ruwan"]
+            }
+        ],
+        equipment: [
+            { name: "Pro Leather Cricket Ball", total: 10, available: 10 },
+            { name: "Cricket Bat", total: 5, available: 5 }
+        ],
+        borrowLog: [],
+        events: []
+    };
+
+    // ─── Load data ───────────────────────────────────────────────────
+    let portalData = JSON.parse(localStorage.getItem('portalData')) || defaultData;
+    if (!portalData.borrowLog) portalData.borrowLog = [];
+    if (!portalData.events) portalData.events = [];
+    saveData();
+
+    function saveData() {
+        localStorage.setItem('portalData', JSON.stringify(portalData));
+        renderData();
+    }
+
+    // ─── Toast helper ────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'show ' + type;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+    }
+
+    // ─── Render everything ───────────────────────────────────────────
+    function renderData() {
+        renderSports();
+        renderEquipment();
+        renderEvents(); 
+        renderAlbum();
+    }
+
+    function renderSports() {
+        const query = document.getElementById('sportSearch').value.trim().toLowerCase();
+        const sportDiv = document.getElementById('sportList');
+
+        const filtered = portalData.sports.filter(s =>
+            s.name.toLowerCase().includes(query) ||
+            (s.venue || '').toLowerCase().includes(query) ||
+            (s.teamName || '').toLowerCase().includes(query)
+        );
+
+        if (filtered.length === 0) {
+            sportDiv.innerHTML = `<div class="empty-state"><span class="emoji">🔍</span>No sports found matching "<strong>${query}</strong>"</div>`;
+            return;
+        }
+
+        sportDiv.innerHTML = filtered.map((sport, i) => `
+            <div class="card" style="animation-delay:${i * 0.08}s;">
+                <h3>${sport.name}</h3>
+                <p>📍 Venue: <span>${sport.venue || 'TBD'}</span></p>
+                <p>⏰ Time: <span>${sport.time || 'TBD'}</span></p>
+                <p>👥 Members: <span>${sport.members.length}</span></p>
+                <button class="btn btn-primary" onclick="openModal(${portalData.sports.indexOf(sport)})">View Team Details</button>
+            </div>
+        `).join('');
+    }
+
+    function renderEquipment() {
+        const equipDiv = document.getElementById('equipmentList');
+
+        if (portalData.equipment.length === 0) {
+            equipDiv.innerHTML = `<div class="empty-state"><span class="emoji">📦</span>No equipment listed yet.</div>`;
+            return;
+        }
+
+        equipDiv.innerHTML = portalData.equipment.map((item, index) => {
+            const hasStock = item.available > 0;
+            const borrowed = item.total - item.available;
+            return `
+                <div class="card" style="text-align:center; animation-delay:${index * 0.08}s;">
+                    <h3>${item.name}</h3>
+                    <span class="badge ${hasStock ? '' : 'out'}">
+                        ${hasStock ? `Available: ${item.available}` : 'Out of Stock'}
+                    </span>
+                    <p style="margin-top:10px;">Total: <span>${item.total}</span> &nbsp;|&nbsp; Borrowed: <span>${borrowed}</span></p>
+                    <div class="btn-row">
+                        <button class="btn btn-primary" onclick="borrowItem(${index})" ${hasStock ? '' : 'disabled'}>
+                            ${hasStock ? 'Borrow' : 'Unavailable'}
+                        </button>
+                        <button class="btn btn-accent" onclick="returnItem(${index})" ${borrowed > 0 ? '' : 'disabled'}>
+                            Return
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderEvents() {
+        const eventsDiv = document.getElementById('eventsList');
+        if (!portalData.events || portalData.events.length === 0) {
+            eventsDiv.innerHTML = `<div class="empty-state"><span class="emoji">🗓️</span>No matches scheduled yet.</div>`;
+            return;
+        }
+
+        eventsDiv.innerHTML = portalData.events.map((event, i) => {
+            const isCompleted = event.status === 'Completed';
+            return `
+                <div class="card" style="border-left: 4px solid ${isCompleted ? 'var(--accent)' : 'var(--primary)'}; animation-delay:${i * 0.08}s;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <h3 style="margin:0;">${event.sport}</h3>
+                        <span class="badge ${isCompleted ? '' : 'out'}" style="font-size: 0.7em;">${event.status}</span>
+                    </div>
+                    <p style="font-weight: 700; margin-top: 10px; color: var(--text-main);">
+                        UCSC vs ${event.opponent}
+                    </p>
+                    <p>📍 Venue: <span>${event.venue}</span></p>
+                    <p>⏰ Date: <span>${event.date}</span></p>
+                    ${isCompleted ? `<div style="margin-top: 12px; padding: 10px; background: rgba(16,185,129,0.1); border-radius: 8px; border: 1px dashed var(--accent);">
+                        <p style="margin:0; font-weight:700; color:var(--accent);">Result: <span>${event.result}</span></p>
+                    </div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderAlbum() {
+        const albumDiv = document.getElementById('photoAlbum');
+        albumDiv.innerHTML = albumPhotos.map(src => `
+            <div class="gallery-item" onclick="zoomImg('${src}')">
+                <img src="${src}" alt="Campus Action"
+                     onerror="this.parentElement.innerHTML='<div class=\\'gallery-placeholder\\'>📷 Photo unavailable</div>'">
+            </div>
+        `).join('');
+    }
+
+    // ─── Zoom ────────────────────────────────────────────────────────
+    function zoomImg(src) {
+        document.getElementById('zoomedImg').src = src;
+        document.getElementById('zoomOverlay').style.display = 'flex';
+    }
+
+    // ─── Borrow / Return ─────────────────────────────────────────────
+    function borrowItem(index) {
+        const item = portalData.equipment[index];
+        if (item.available > 0) {
+            item.available -= 1;
+            portalData.borrowLog.push({ item: item.name, action: 'borrowed', time: new Date().toLocaleString() });
+            saveData();
+            showToast(`✅ "${item.name}" borrowed successfully!`, 'success');
+        }
+    }
+
+    function returnItem(index) {
+        const item = portalData.equipment[index];
+        if (item.available < item.total) {
+            item.available += 1;
+            portalData.borrowLog.push({ item: item.name, action: 'returned', time: new Date().toLocaleString() });
+            saveData();
+            showToast(`↩️ "${item.name}" returned. Thank you!`, 'success');
+        } else {
+            showToast(`⚠️ All units of "${item.name}" are already in stock.`, 'error');
+        }
+    }
+
+    // ─── Modal ───────────────────────────────────────────────────────
+    function openModal(index) {
+        const sport = portalData.sports[index];
+        document.getElementById('modalSportName').innerText = sport.name;
+        document.getElementById('modalTeamName').innerText = sport.teamName || '';
+        document.getElementById('modalCaptain').innerText = sport.captain || 'Pending';
+        document.getElementById('modalCoach').innerText = sport.coach || 'Not Assigned';
+        document.getElementById('modalContact').innerText = sport.contact || 'TBD';
+        document.getElementById('modalTime').innerText = sport.time || 'TBD';
+        document.getElementById('modalVenue').innerText = sport.venue || 'TBD';
+        document.getElementById('modalMembers').innerText =
+            sport.members.length > 0 ? sport.members.join('  •  ') : 'No members added yet.';
+        document.getElementById('sportModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('sportModal').classList.remove('active');
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    renderData();
+</script>
+</body>
+</html>

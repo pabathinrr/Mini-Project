@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | UCSC Sport Portal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+        :root {
+            --bg-dark: #0a0f1e;
+            --panel-bg: #111827;
+            --panel-border: #1e2d40;
+            --primary: #3b82f6;
+            --text-light: #f1f5f9;
+            --text-muted: #64748b;
+            --border: #1e293b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-dark);
+            background-image: radial-gradient(ellipse at 80% 10%, rgba(59,130,246,0.08) 0%, transparent 50%);
+            color: var(--text-light);
+            margin: 0; padding: 30px 20px 80px;
+            display: flex; justify-content: center;
+        }
+
+        .container { max-width: 920px; width: 100%; }
+
+        /* ─── TOAST ─── */
+        #toast {
+            position: fixed; bottom: 28px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b; color: var(--text-light);
+            padding: 13px 26px; border-radius: 50px;
+            font-size: 0.9em; font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s;
+            opacity: 0; z-index: 9999; white-space: nowrap;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        #toast.success { border-color: var(--success); }
+        #toast.error   { border-color: var(--danger); }
+        #toast.warning { border-color: var(--warning); }
+
+        /* ─── LOGIN GATE ─── */
+        #loginGate {
+            position: fixed; inset: 0;
+            background: #0a0f1e;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 8000;
+        }
+        #loginGate .login-box {
+            background: #111827;
+            border: 1px solid var(--panel-border);
+            border-radius: 20px; padding: 48px 40px;
+            width: 90%; max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        #loginGate .login-box img { height: 64px; margin-bottom: 20px; }
+        #loginGate .login-box h2 {
+            font-family: 'Syne', sans-serif; margin: 0 0 6px;
+            font-size: 1.6em; color: var(--primary);
+        }
+        #loginGate .login-box p { color: var(--text-muted); margin-bottom: 28px; font-size: 0.9em; }
+        #loginGate input {
+            width: 100%; padding: 14px 16px;
+            background: #0f172a; border: 1px solid var(--border);
+            color: white; border-radius: 10px; font-size: 1.1em;
+            text-align: center; letter-spacing: 6px;
+            font-family: monospace; transition: border-color 0.3s;
+            margin-bottom: 14px;
+        }
+        #loginGate input:focus { outline: none; border-color: var(--primary); }
+        #loginGate input.shake {
+            animation: shake 0.4s ease;
+            border-color: var(--danger) !important;
+        }
+        #loginError { color: var(--danger); font-size: 0.85em; margin-top: -6px; margin-bottom: 14px; min-height: 20px; }
+
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            20%,60%  { transform: translateX(-6px); }
+            40%,80%  { transform: translateX(6px); }
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            text-align: center; margin-bottom: 32px;
+            border-bottom: 1px solid var(--border); padding-bottom: 24px;
+        }
+        .header img { height: 70px; margin-bottom: 12px; }
+        .header h1 { margin: 0; font-family: 'Syne', sans-serif; color: var(--primary); font-size: 2em; }
+        .header p  { color: var(--text-muted); margin: 6px 0 0; font-size: 0.9em; }
+        .logout-btn {
+            background: rgba(239,68,68,0.12); color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.3);
+            padding: 8px 18px; border-radius: 8px;
+            cursor: pointer; font-size: 0.85em; font-weight: 600;
+            transition: background 0.2s; margin-top: 14px;
+        }
+        .logout-btn:hover { background: rgba(239,68,68,0.22); }
+
+        /* ─── CARDS ─── */
+        .card {
+            background: var(--panel-bg); padding: 26px;
+            border-radius: 14px; margin-bottom: 22px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+            border: 1px solid var(--panel-border);
+        }
+        .card h3 {
+            margin: 0 0 18px; color: var(--text-light);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px; font-weight: 500;
+            font-family: 'Syne', sans-serif; font-size: 1.05em;
+        }
+
+        /* ─── FORMS ─── */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-group { margin-bottom: 0; }
+        label { display: block; margin-bottom: 7px; color: var(--text-muted); font-size: 0.82em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        input[type="text"], input[type="number"], input[type="password"], select {
+            width: 100%; padding: 11px 14px;
+            background: #0f172a; border: 1px solid var(--border);
+            color: white; border-radius: 8px; font-size: 0.95em;
+            font-family: 'DM Sans', sans-serif;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        input:focus, select:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        input.field-error { border-color: var(--danger) !important; }
+        select option { background: #1e293b; }
+
+        /* ─── BUTTONS ─── */
+        button.btn {
+            padding: 11px 18px; border-radius: 8px;
+            border: none; cursor: pointer; font-weight: 600;
+            font-family: 'DM Sans', sans-serif; font-size: 0.88em;
+            width: 100%; transition: filter 0.2s, transform 0.15s; margin-top: 10px;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        button.btn:hover:not(:disabled) { filter: brightness(1.2); transform: translateY(-1px); }
+        button.btn:disabled { background: #1e293b !important; color: #475569 !important; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-warning { background-color: var(--warning); color: #0f172a; }
+        .btn-danger  { background-color: var(--danger);  color: white; }
+        .btn-purple  { background-color: #7c3aed; color: white; }
+        .btn-sm { width: auto !important; padding: 6px 14px !important; font-size: 0.78em !important; margin: 0 !important; }
+
+        /* ─── LIST ITEMS ─── */
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 14px; border: 1px solid var(--border);
+            background: rgba(0,0,0,0.15); border-radius: 8px; margin-bottom: 8px;
+            gap: 12px; flex-wrap: wrap;
+        }
+        .list-item-name { font-weight: 500; flex: 1; }
+        .list-item-meta { color: var(--text-muted); font-size: 0.85em; }
+        .list-item-controls { display: flex; gap: 8px; flex-shrink: 0; }
+
+        /* ─── ROSTER ─── */
+        #rosterList { max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; }
+        #rosterList::-webkit-scrollbar { width: 4px; }
+        #rosterList::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* ─── EXPORT SECTION ─── */
+        .export-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .export-row .btn { width: auto; flex: 1; min-width: 140px; }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 620px) {
+            body { padding: 16px 12px 60px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .export-row { flex-direction: column; }
+            .list-item { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginGate">
+    <div class="login-box">
+        <img src="logo.png" alt="UCSC Logo" onerror="this.style.display='none'">
+        <h2>Staff Access</h2>
+        <p>Enter the admin PIN to continue</p>
+        <input type="password" id="pinInput" maxlength="6" placeholder="• • • • • •"
+               onkeydown="if(event.key==='Enter') checkPin()">
+        <div id="loginError"></div>
+        <button class="btn btn-primary" onclick="checkPin()">Unlock Portal</button>
+        <p style="margin-top:18px; font-size:0.78em; color:var(--text-muted);">Default PIN: <code style="color:#94a3b8;">1234</code></p>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="container" id="adminContent" style="display:none;">
+    <div class="header">
+        <img src="logo.png" alt="UCSC Logo" onerror="this.style.display='none'">
+        <h1>⚙️ Staff Administration</h1>
+        <p>Database Management Console</p>
+        <button class="logout-btn" onclick="logout()">🔒 Lock &amp; Logout</button>
+    </div>
+
+    <div class="card" style="border-left: 3px solid #7c3aed;">
+        <h3 style="color:#c4b5fd;">➕ Create New Sport Category</h3>
+        <div class="form-grid">
+            <div class="form-group"><label>Sport Name *</label><input type="text" id="newSportName" placeholder="e.g. Football"></div>
+            <div class="form-group"><label>Official Team Name</label><input type="text" id="newTeamName" placeholder="e.g. UCSC Falcons"></div>
+            <div class="form-group"><label>Venue</label><input type="text" id="newVenue" placeholder="e.g. University Grounds"></div>
+            <div class="form-group"><label>Practice Time</label><input type="text" id="newTime" placeholder="e.g. Fridays 5:00 PM"></div>
+        </div>
+        <button class="btn btn-purple" onclick="createNewSport()">Initialize New Sport</button>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--warning);">
+        <h3 style="color:var(--warning);">📝 Update Sport Details &amp; Contacts</h3>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label>Select Sport to Edit</label>
+            <select id="editSportSelect" onchange="loadSportDetails()"></select>
+        </div>
+        <div class="form-grid">
+            <div class="form-group"><label>Team Name</label><input type="text" id="editTeamName"></div>
+            <div class="form-group"><label>Captain Name</label><input type="text" id="editCaptain"></div>
+            <div class="form-group"><label>Coach Name</label><input type="text" id="editCoach"></div>
+            <div class="form-group"><label>Contact (Email / Phone)</label><input type="text" id="editContact" placeholder="e.g. coach@ucsc.cmb.ac.lk"></div>
+            <div class="form-group"><label>Practice Time</label><input type="text" id="editTime"></div>
+            <div class="form-group"><label>Practice Venue</label><input type="text" id="editVenue"></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;">
+            <button class="btn btn-warning" onclick="saveSportDetails()">💾 Save Changes</button>
+            <button class="btn btn-danger"  onclick="deleteSport()">🗑️ Delete This Sport</button>
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--primary);">
+        <h3 style="color:var(--primary);">👥 Roster Management</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Sport</label>
+                <select id="memberSportSelect" onchange="updateRosterList()"></select>
+                <input type="text" id="memberName" placeholder="Full name of player" style="margin-top:10px;">
+                <button class="btn btn-primary" onclick="addMember()">+ Add to Roster</button>
+            </div>
+            <div class="form-group">
+                <label>Current Team Members</label>
+                <div id="rosterList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--danger);">
+        <h3 style="color:var(--danger);">🛠️ Manage Equipment Inventory</h3>
+        <div class="form-grid" style="background:rgba(0,0,0,0.15); padding:16px; border-radius:10px; margin-bottom:20px;">
+            <div class="form-group"><label>Equipment Name *</label><input type="text" id="equipName" placeholder="e.g. Size 5 Football"></div>
+            <div class="form-group"><label>Quantity *</label><input type="number" id="equipQty" min="1" value="1"></div>
+            <div style="grid-column:span 2;"><button class="btn btn-success" onclick="addEquipment()">+ Add to Database</button></div>
+        </div>
+        <label style="display:block; margin-bottom:8px;">Current Armory Roster:</label>
+        <div id="adminEquipmentList"></div>
+    </div>
+
+    <div class="card" style="border-left: 3px solid #f43f5e;">
+        <h3 style="color:#fb7185;">🗓️ Schedule Matches & Results</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Sport</label>
+                <select id="eventSportSelect"></select>
+            </div>
+            <div class="form-group"><label>Opponent</label><input type="text" id="eventOpponent" placeholder="e.g. Uni of Moratuwa"></div>
+            <div class="form-group"><label>Venue</label><input type="text" id="eventVenue" placeholder="e.g. Sugathadasa Stadium"></div>
+            <div class="form-group"><label>Date & Time</label><input type="text" id="eventDate" placeholder="e.g. Oct 15, 3:00 PM"></div>
+        </div>
+        <button class="btn btn-primary" style="background-color: #f43f5e;" onclick="addEvent()">+ Add Match</button>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+        
+        <label style="display:block; margin-bottom:8px;">Scheduled Matches & Results:</label>
+        <div id="adminEventsList"></div>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--success);">
+        <h3 style="color:var(--success);">💾 Data Management &amp; Backup</h3>
+        <p style="color:var(--text-muted); font-size:0.88em; margin-top:0; margin-bottom:16px;">
+            Export your data as a JSON backup file, or reset everything to defaults.
+        </p>
+        <div class="export-row">
+            <button class="btn btn-success" onclick="exportData()">⬇️ Export JSON Backup</button>
+            <button class="btn btn-danger"  onclick="resetData()">⚠️ Reset All Data</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ─── PIN AUTH ────────────────────────────────────────────────────
+    const ADMIN_PIN = "1234"; 
+
+    function checkPin() {
+        const entered = document.getElementById('pinInput').value.trim();
+        const errDiv  = document.getElementById('loginError');
+
+        if (!entered) {
+            errDiv.textContent = 'Please enter the PIN.';
+            return;
+        }
+        if (entered === ADMIN_PIN) {
+            document.getElementById('loginGate').style.display = 'none';
+            document.getElementById('adminContent').style.display = 'block';
+            sessionStorage.setItem('adminAuth', '1');
+            errDiv.textContent = '';
+        } else {
+            const input = document.getElementById('pinInput');
+            input.classList.add('shake');
+            input.value = '';
+            errDiv.textContent = 'Incorrect PIN. Try again.';
+            setTimeout(() => input.classList.remove('shake'), 500);
+        }
+    }
+
+    function logout() {
+        sessionStorage.removeItem('adminAuth');
+        document.getElementById('adminContent').style.display = 'none';
+        document.getElementById('loginGate').style.display = 'flex';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('loginError').textContent = '';
+    }
+
+    // Auto-unlock if already authenticated this session
+    if (sessionStorage.getItem('adminAuth') === '1') {
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+    }
+
+    // ─── DATA ────────────────────────────────────────────────────────
+    const defaultData = {
+        sports: [
+            {
+                name: "Cricket", teamName: "UCSC Strikers",
+                captain: "Kamal Perera", coach: "Not Assigned",
+                contact: "cricket@ucsc.cmb.ac.lk",
+                venue: "University Grounds", time: "Tuesdays 4:00 PM",
+                members: ["Kamal", "Ruwan"]
+            }
+        ],
+        equipment: [
+            { name: "Pro Leather Cricket Ball", total: 10, available: 10 },
+            { name: "Cricket Bat", total: 5, available: 5 }
+        ],
+        borrowLog: [],
+        events: []
+    };
+
+    let portalData = JSON.parse(localStorage.getItem('portalData')) || defaultData;
+    if (!portalData.borrowLog) portalData.borrowLog = [];
+    if (!portalData.events) portalData.events = [];
+
+    function saveData() {
+        localStorage.setItem('portalData', JSON.stringify(portalData));
+        populateDropdowns();
+        updateEquipmentList();
+        updateRosterList();
+        updateEventsList();
+    }
+
+    // ─── TOAST ───────────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'show ' + type;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { t.className = ''; }, 3200);
+    }
+
+    // ─── CUSTOM CONFIRM ──────────────────────────────────────────────
+    function confirmAction(msg, callback) {
+        if (window.confirm(msg)) callback();
+    }
+
+    // ─── FIELD VALIDATION ────────────────────────────────────────────
+    function validateField(id, label) {
+        const el = document.getElementById(id);
+        if (!el.value.trim()) {
+            el.classList.add('field-error');
+            el.addEventListener('input', () => el.classList.remove('field-error'), { once: true });
+            showToast(`⚠️ "${label}" is required.`, 'warning');
+            el.focus();
+            return false;
+        }
+        return true;
+    }
+
+    // ─── DROPDOWNS ───────────────────────────────────────────────────
+    function populateDropdowns() {
+        const editSelect   = document.getElementById('editSportSelect');
+        const memberSelect = document.getElementById('memberSportSelect');
+        const eventSelect  = document.getElementById('eventSportSelect');
+        const prevEdit     = editSelect.value;
+        const prevMember   = memberSelect.value;
+        const prevEvent    = eventSelect.value;
+
+        if (portalData.sports.length === 0) {
+            const empty = '<option value="">— No sports yet —</option>';
+            editSelect.innerHTML   = empty;
+            memberSelect.innerHTML = empty;
+            eventSelect.innerHTML  = empty;
+            document.getElementById('rosterList').innerHTML = '<p style="color:var(--text-muted);font-size:0.9em;">No sports added yet.</p>';
+            return;
+        }
+
+        const options = portalData.sports.map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+        editSelect.innerHTML   = options;
+        memberSelect.innerHTML = options;
+        eventSelect.innerHTML  = options;
+
+        if (prevEdit   < portalData.sports.length) editSelect.value   = prevEdit;
+        if (prevMember < portalData.sports.length) memberSelect.value = prevMember;
+        if (prevEvent  < portalData.sports.length) eventSelect.value  = prevEvent;
+
+        loadSportDetails();
+        updateRosterList();
+    }
+
+    // ─── CREATE SPORT ────────────────────────────────────────────────
+    function createNewSport() {
+        if (!validateField('newSportName', 'Sport Name')) return;
+
+        const name = document.getElementById('newSportName').value.trim();
+        const duplicate = portalData.sports.find(s => s.name.toLowerCase() === name.toLowerCase());
+        if (duplicate) {
+            showToast(`⚠️ "${name}" already exists.`, 'warning');
+            return;
+        }
+
+        portalData.sports.push({
+            name,
+            teamName: document.getElementById('newTeamName').value.trim() || `${name} Team`,
+            captain:  "Pending",
+            coach:    "Not Assigned",
+            contact:  "TBD",
+            venue:    document.getElementById('newVenue').value.trim() || "TBD",
+            time:     document.getElementById('newTime').value.trim()  || "TBD",
+            members:  []
+        });
+
+        ['newSportName','newTeamName','newVenue','newTime'].forEach(id => document.getElementById(id).value = '');
+        saveData();
+        showToast(`✅ "${name}" created successfully!`, 'success');
+    }
+
+    // ─── LOAD / SAVE SPORT DETAILS ───────────────────────────────────
+    function loadSportDetails() {
+        const idx   = document.getElementById('editSportSelect').value;
+        const sport = portalData.sports[idx];
+        if (!sport) return;
+        document.getElementById('editTeamName').value = sport.teamName || '';
+        document.getElementById('editCaptain').value  = sport.captain  || '';
+        document.getElementById('editCoach').value    = sport.coach    || '';
+        document.getElementById('editContact').value  = sport.contact  || '';
+        document.getElementById('editTime').value     = sport.time     || '';
+        document.getElementById('editVenue').value    = sport.venue    || '';
+    }
+
+    function saveSportDetails() {
+        const idx = document.getElementById('editSportSelect').value;
+        if (idx === '' || !portalData.sports[idx]) { showToast('⚠️ No sport selected.', 'warning'); return; }
+
+        const s       = portalData.sports[idx];
+        s.teamName    = document.getElementById('editTeamName').value.trim();
+        s.captain     = document.getElementById('editCaptain').value.trim();
+        s.coach       = document.getElementById('editCoach').value.trim();
+        s.contact     = document.getElementById('editContact').value.trim();
+        s.time        = document.getElementById('editTime').value.trim();
+        s.venue       = document.getElementById('editVenue').value.trim();
+        saveData();
+        showToast(`✅ "${s.name}" details updated!`, 'success');
+    }
+
+    // ─── DELETE SPORT ────────────────────────────────────────────────
+    function deleteSport() {
+        const idx = document.getElementById('editSportSelect').value;
+        if (idx === '' || !portalData.sports[idx]) { showToast('⚠️ No sport selected.', 'warning'); return; }
+        const name = portalData.sports[idx].name;
+        confirmAction(`Delete "${name}" and all its roster data? This cannot be undone.`, () => {
+            portalData.sports.splice(idx, 1);
+            saveData();
+            showToast(`🗑️ "${name}" deleted.`, 'error');
+        });
+    }
+
+    // ─── ROSTER ──────────────────────────────────────────────────────
+    function addMember() {
+        const idx  = document.getElementById('memberSportSelect').value;
+        const name = document.getElementById('memberName').value.trim();
+        if (!name) { showToast('⚠️ Enter a player name.', 'warning'); return; }
+        if (idx === '' || !portalData.sports[idx]) { showToast('⚠️ Select a sport first.', 'warning'); return; }
+
+        const members = portalData.sports[idx].members;
+        if (members.map(m => m.toLowerCase()).includes(name.toLowerCase())) {
+            showToast(`⚠️ "${name}" is already in the roster.`, 'warning');
+            return;
+        }
+
+        members.push(name);
+        document.getElementById('memberName').value = '';
+        saveData();
+        showToast(`✅ "${name}" added to roster.`, 'success');
+    }
+
+    function updateRosterList() {
+        const idx     = document.getElementById('memberSportSelect').value;
+        const rDiv    = document.getElementById('rosterList');
+        const sport   = portalData.sports[idx];
+
+        if (!sport || sport.members.length === 0) {
+            rDiv.innerHTML = '<p style="color:var(--text-muted);font-size:0.88em;padding:4px 0;">No members yet.</p>';
+            return;
+        }
+
+        rDiv.innerHTML = sport.members.map((m, i) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.9em;">
+                <span>${m}</span>
+                <button class="btn btn-danger btn-sm" onclick="removeMember(${idx},${i})">Remove</button>
+            </div>
+        `).join('');
+    }
+
+    function removeMember(sportIdx, memberIdx) {
+        const name = portalData.sports[sportIdx].members[memberIdx];
+        confirmAction(`Remove "${name}" from the roster?`, () => {
+            portalData.sports[sportIdx].members.splice(memberIdx, 1);
+            saveData();
+            showToast(`🗑️ "${name}" removed.`, 'error');
+        });
+    }
+
+    // ─── EQUIPMENT ───────────────────────────────────────────────────
+    function addEquipment() {
+        if (!validateField('equipName', 'Equipment Name')) return;
+        const name = document.getElementById('equipName').value.trim();
+        const qty  = parseInt(document.getElementById('equipQty').value);
+
+        if (isNaN(qty) || qty < 1) {
+            showToast('⚠️ Quantity must be at least 1.', 'warning');
+            return;
+        }
+
+        const existing = portalData.equipment.find(e => e.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+            showToast(`⚠️ "${name}" already exists in inventory.`, 'warning');
+            return;
+        }
+
+        portalData.equipment.push({ name, total: qty, available: qty });
+        document.getElementById('equipName').value = '';
+        document.getElementById('equipQty').value  = '1';
+        saveData();
+        showToast(`✅ "${name}" (×${qty}) added to inventory.`, 'success');
+    }
+
+    function updateEquipmentList() {
+        const list = document.getElementById('adminEquipmentList');
+        if (portalData.equipment.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);font-size:0.9em;">No items in inventory.</p>';
+            return;
+        }
+
+        list.innerHTML = portalData.equipment.map((item, i) => {
+            const isFull   = item.available >= item.total;
+            const borrowed = item.total - item.available;
+            return `
+                <div class="list-item">
+                    <div>
+                        <span class="list-item-name">${item.name}</span>
+                        <span class="list-item-meta"> — Available: ${item.available}/${item.total} &nbsp;|&nbsp; Borrowed: ${borrowed}</span>
+                    </div>
+                    <div class="list-item-controls">
+                        <button class="btn btn-success btn-sm" onclick="returnEquipment(${i})" ${isFull ? 'disabled' : ''}>↩ Return</button>
+                        <button class="btn btn-danger btn-sm"  onclick="deleteEquipment(${i})">🗑 Delete</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function returnEquipment(idx) {
+        const item = portalData.equipment[idx];
+        if (item.available < item.total) {
+            item.available++;
+            portalData.borrowLog = portalData.borrowLog || [];
+            portalData.borrowLog.push({ item: item.name, action: 'returned (admin)', time: new Date().toLocaleString() });
+            saveData();
+            showToast(`↩️ One "${item.name}" returned.`, 'success');
+        } else {
+            showToast(`⚠️ All units of "${item.name}" are already in stock.`, 'warning');
+        }
+    }
+
+    function deleteEquipment(idx) {
+        const name = portalData.equipment[idx].name;
+        confirmAction(`Delete "${name}" from inventory? This cannot be undone.`, () => {
+            portalData.equipment.splice(idx, 1);
+            saveData();
+            showToast(`🗑️ "${name}" deleted from inventory.`, 'error');
+        });
+    }
+
+    // ─── EVENTS ──────────────────────────────────────────────────────
+    function addEvent() {
+        const sportIdx = document.getElementById('eventSportSelect').value;
+        if (sportIdx === '' || !portalData.sports[sportIdx]) { showToast('⚠️ Add a sport first.', 'warning'); return; }
+
+        if (!validateField('eventOpponent', 'Opponent') || !validateField('eventVenue', 'Venue') || !validateField('eventDate', 'Date & Time')) return;
+
+        const sport = portalData.sports[sportIdx].name;
+        const opponent = document.getElementById('eventOpponent').value.trim();
+        const venue = document.getElementById('eventVenue').value.trim();
+        const date = document.getElementById('eventDate').value.trim();
+
+        portalData.events.push({
+            sport, opponent, venue, date,
+            status: 'Upcoming', result: ''
+        });
+
+        document.getElementById('eventOpponent').value = '';
+        document.getElementById('eventVenue').value = '';
+        document.getElementById('eventDate').value = '';
+        
+        saveData();
+        showToast(`✅ Match vs ${opponent} scheduled!`, 'success');
+    }
+
+    function updateEventsList() {
+        const list = document.getElementById('adminEventsList');
+        if (!portalData.events || portalData.events.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);font-size:0.9em;">No matches scheduled.</p>';
+            return;
+        }
+
+        list.innerHTML = portalData.events.map((ev, i) => `
+            <div class="list-item" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <div style="display:flex; justify-content: space-between;">
+                    <span class="list-item-name">${ev.sport} vs ${ev.opponent}</span>
+                    <span class="badge ${ev.status === 'Completed' ? '' : 'out'}" style="padding: 2px 8px; font-size: 0.7em; border-radius: 12px;">${ev.status}</span>
+                </div>
+                <div class="list-item-meta">📍 ${ev.venue} &nbsp;|&nbsp; ⏰ ${ev.date}</div>
+                
+                ${ev.status === 'Upcoming' ? `
+                <div style="display:flex; gap: 8px; margin-top: 8px;">
+                    <input type="text" id="resultInput_${i}" placeholder="e.g. Won 3-1" style="flex:1; padding: 6px 10px; font-size: 0.85em;">
+                    <button class="btn btn-success btn-sm" onclick="saveEventResult(${i})">Save Result</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteEvent(${i})">Delete</button>
+                </div>
+                ` : `
+                <div style="display:flex; justify-content: space-between; background: rgba(16,185,129,0.1); padding: 8px; border-radius: 6px; margin-top: 8px;">
+                    <span style="color: var(--success); font-weight: bold; font-size: 0.9em;">Result: ${ev.result}</span>
+                    <button class="btn btn-danger btn-sm" onclick="deleteEvent(${i})">Delete</button>
+                </div>
+                `}
+            </div>
+        `).join('');
+    }
+
+    function saveEventResult(idx) {
+        const resultInput = document.getElementById(`resultInput_${idx}`).value.trim();
+        if (!resultInput) { showToast('⚠️ Please enter a result.', 'warning'); return; }
+
+        portalData.events[idx].result = resultInput;
+        portalData.events[idx].status = 'Completed';
+        saveData();
+        showToast('✅ Match result saved!', 'success');
+    }
+
+    function deleteEvent(idx) {
+        confirmAction('Delete this match event?', () => {
+            portalData.events.splice(idx, 1);
+            saveData();
+            showToast('🗑️ Event deleted.', 'error');
+        });
+    }
+
+    // ─── EXPORT / RESET ──────────────────────────────────────────────
+    function exportData() {
+        const blob = new Blob([JSON.stringify(portalData, null, 2)], { type: 'application/json' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `ucsc_portal_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('📦 Backup exported!', 'success');
+    }
+
+    function resetData() {
+        confirmAction('⚠️ This will DELETE all sports, equipment, and roster data. Are you absolutely sure?', () => {
+            localStorage.removeItem('portalData');
+            portalData = JSON.parse(JSON.stringify(defaultData));
+            saveData();
+            showToast('🔄 All data has been reset to defaults.', 'warning');
+        });
+    }
+
+    // ─── INIT ────────────────────────────────────────────────────────
+    populateDropdowns();
+    updateEquipmentList();
+    updateEventsList();
+</script>
+</body>
+</html>
