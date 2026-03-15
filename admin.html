@@ -50,49 +50,6 @@
         #toast.error   { border-color: var(--danger); }
         #toast.warning { border-color: var(--warning); }
 
-        /* ─── LOGIN GATE ─── */
-        #loginGate {
-            position: fixed; inset: 0;
-            background: #0a0f1e;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            z-index: 8000;
-        }
-        #loginGate .login-box {
-            background: #111827;
-            border: 1px solid var(--panel-border);
-            border-radius: 20px; padding: 48px 40px;
-            width: 90%; max-width: 380px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-        #loginGate .login-box img { height: 64px; margin-bottom: 20px; }
-        #loginGate .login-box h2 {
-            font-family: 'Syne', sans-serif; margin: 0 0 6px;
-            font-size: 1.6em; color: var(--primary);
-        }
-        #loginGate .login-box p { color: var(--text-muted); margin-bottom: 28px; font-size: 0.9em; }
-        #loginGate input {
-            width: 100%; padding: 14px 16px;
-            background: #0f172a; border: 1px solid var(--border);
-            color: white; border-radius: 10px; font-size: 1.1em;
-            text-align: center; letter-spacing: 6px;
-            font-family: monospace; transition: border-color 0.3s;
-            margin-bottom: 14px;
-        }
-        #loginGate input:focus { outline: none; border-color: var(--primary); }
-        #loginGate input.shake {
-            animation: shake 0.4s ease;
-            border-color: var(--danger) !important;
-        }
-        #loginError { color: var(--danger); font-size: 0.85em; margin-top: -6px; margin-bottom: 14px; min-height: 20px; }
-
-        @keyframes shake {
-            0%,100% { transform: translateX(0); }
-            20%,60%  { transform: translateX(-6px); }
-            40%,80%  { transform: translateX(6px); }
-        }
-
         /* ─── HEADER ─── */
         .header {
             text-align: center; margin-bottom: 32px;
@@ -190,27 +147,29 @@
 </head>
 <body>
 
-<div id="loginGate">
-    <div class="login-box">
-        <img src="logo.png" alt="UCSC Logo" onerror="this.style.display='none'">
-        <h2>Staff Access</h2>
-        <p>Enter the admin PIN to continue</p>
-        <input type="password" id="pinInput" maxlength="6" placeholder="• • • • • •"
-               onkeydown="if(event.key==='Enter') checkPin()">
-        <div id="loginError"></div>
-        <button class="btn btn-primary" onclick="checkPin()">Unlock Portal</button>
-        <p style="margin-top:18px; font-size:0.78em; color:var(--text-muted);">Default PIN: <code style="color:#94a3b8;">1234</code></p>
-    </div>
-</div>
+<script>
+    const adminUser = JSON.parse(sessionStorage.getItem('activeUser'));
+    if (!adminUser || adminUser.role !== 'admin') {
+        window.location.href = 'login.html'; // Kick them out if not admin
+    }
+</script>
 
 <div id="toast"></div>
 
-<div class="container" id="adminContent" style="display:none;">
+<div class="container" id="adminContent">
     <div class="header">
         <img src="logo.png" alt="UCSC Logo" onerror="this.style.display='none'">
         <h1>⚙️ Staff Administration</h1>
         <p>Database Management Console</p>
         <button class="logout-btn" onclick="logout()">🔒 Lock &amp; Logout</button>
+    </div>
+
+    <div class="card" style="border-left: 3px solid #0ea5e9;">
+        <h3 style="color:#38bdf8;">📋 Current Sporting Teams & Directory</h3>
+        <p style="color:var(--text-muted); font-size:0.88em; margin-top:-10px; margin-bottom:16px;">
+            Overview of all active sports. Use the buttons to instantly update team captains, contacts, or roster members.
+        </p>
+        <div id="adminSportsList"></div>
     </div>
 
     <div class="card" style="border-left: 3px solid #7c3aed;">
@@ -224,7 +183,7 @@
         <button class="btn btn-purple" onclick="createNewSport()">Initialize New Sport</button>
     </div>
 
-    <div class="card" style="border-left: 3px solid var(--warning);">
+    <div class="card" id="editSportCard" style="border-left: 3px solid var(--warning);">
         <h3 style="color:var(--warning);">📝 Update Sport Details &amp; Contacts</h3>
         <div class="form-group" style="margin-bottom:16px;">
             <label>Select Sport to Edit</label>
@@ -244,8 +203,8 @@
         </div>
     </div>
 
-    <div class="card" style="border-left: 3px solid var(--primary);">
-        <h3 style="color:var(--primary);">👥 Roster Management</h3>
+    <div class="card" id="rosterCard" style="border-left: 3px solid var(--primary);">
+        <h3 style="color:var(--primary);">👥 Roster & Members Management</h3>
         <div class="form-grid">
             <div class="form-group">
                 <label>Sport</label>
@@ -290,6 +249,49 @@
         <div id="adminEventsList"></div>
     </div>
 
+    <div class="card" style="border-left: 3px solid #eab308;">
+        <h3 style="color:#fde047;">➕ Post New Achievement</h3>
+        <div class="form-grid">
+            <div class="form-group"><label>Achievement Title *</label><input type="text" id="achTitle" placeholder="e.g. Inter-University Champions"></div>
+            <div class="form-group"><label>Student/Team Name *</label><input type="text" id="achStudent" placeholder="e.g. UCSC Badminton Team"></div>
+            <div class="form-group"><label>Date</label><input type="text" id="achDate" placeholder="e.g. March 2026"></div>
+            <div class="form-group"><label>Image URL (or path)</label><input type="text" id="achImage" placeholder="e.g. images/win.jpg or https://..."></div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Description</label>
+                <input type="text" id="achDesc" placeholder="Brief details about the achievement...">
+            </div>
+        </div>
+        <button class="btn btn-primary" style="background-color: #eab308; color: #000;" onclick="addAchievement()">+ Post Achievement</button>
+    </div>
+
+    <div class="card" id="editAchCard" style="border-left: 3px solid #f59e0b;">
+        <h3 style="color:#fcd34d;">📝 Edit & Manage Achievements</h3>
+        
+        <label style="display:block; margin-bottom:8px;">Posted Achievements Overview:</label>
+        <div id="adminAchievementsList" style="margin-bottom: 24px;"></div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label>Select Achievement to Edit</label>
+            <select id="editAchSelect" onchange="loadAchievementDetails()"></select>
+        </div>
+        <div class="form-grid">
+            <div class="form-group"><label>Achievement Title *</label><input type="text" id="editAchTitle"></div>
+            <div class="form-group"><label>Student/Team Name *</label><input type="text" id="editAchStudent"></div>
+            <div class="form-group"><label>Date</label><input type="text" id="editAchDate"></div>
+            <div class="form-group"><label>Image URL (or path)</label><input type="text" id="editAchImage"></div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Description</label>
+                <input type="text" id="editAchDesc">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;">
+            <button class="btn btn-warning" onclick="saveAchievementDetails()">💾 Save Changes</button>
+            <button class="btn btn-danger"  onclick="deleteAchievement()">🗑️ Delete Achievement</button>
+        </div>
+    </div>
+
     <div class="card" style="border-left: 3px solid var(--success);">
         <h3 style="color:var(--success);">💾 Data Management &amp; Backup</h3>
         <p style="color:var(--text-muted); font-size:0.88em; margin-top:0; margin-bottom:16px;">
@@ -303,43 +305,9 @@
 </div>
 
 <script>
-    // ─── PIN AUTH ────────────────────────────────────────────────────
-    const ADMIN_PIN = "1234"; 
-
-    function checkPin() {
-        const entered = document.getElementById('pinInput').value.trim();
-        const errDiv  = document.getElementById('loginError');
-
-        if (!entered) {
-            errDiv.textContent = 'Please enter the PIN.';
-            return;
-        }
-        if (entered === ADMIN_PIN) {
-            document.getElementById('loginGate').style.display = 'none';
-            document.getElementById('adminContent').style.display = 'block';
-            sessionStorage.setItem('adminAuth', '1');
-            errDiv.textContent = '';
-        } else {
-            const input = document.getElementById('pinInput');
-            input.classList.add('shake');
-            input.value = '';
-            errDiv.textContent = 'Incorrect PIN. Try again.';
-            setTimeout(() => input.classList.remove('shake'), 500);
-        }
-    }
-
     function logout() {
-        sessionStorage.removeItem('adminAuth');
-        document.getElementById('adminContent').style.display = 'none';
-        document.getElementById('loginGate').style.display = 'flex';
-        document.getElementById('pinInput').value = '';
-        document.getElementById('loginError').textContent = '';
-    }
-
-    // Auto-unlock if already authenticated this session
-    if (sessionStorage.getItem('adminAuth') === '1') {
-        document.getElementById('loginGate').style.display = 'none';
-        document.getElementById('adminContent').style.display = 'block';
+        sessionStorage.removeItem('activeUser');
+        window.location.href = 'login.html';
     }
 
     // ─── DATA ────────────────────────────────────────────────────────
@@ -358,19 +326,23 @@
             { name: "Cricket Bat", total: 5, available: 5 }
         ],
         borrowLog: [],
-        events: []
+        events: [],
+        achievements: []
     };
 
     let portalData = JSON.parse(localStorage.getItem('portalData')) || defaultData;
     if (!portalData.borrowLog) portalData.borrowLog = [];
     if (!portalData.events) portalData.events = [];
+    if (!portalData.achievements) portalData.achievements = [];
 
     function saveData() {
         localStorage.setItem('portalData', JSON.stringify(portalData));
+        updateSportsDirectory(); 
         populateDropdowns();
         updateEquipmentList();
         updateRosterList();
         updateEventsList();
+        updateAchievementsList(); 
     }
 
     // ─── TOAST ───────────────────────────────────────────────────────
@@ -401,35 +373,90 @@
         return true;
     }
 
+    // ─── SPORTS DIRECTORY ──────────────────────────────
+    function updateSportsDirectory() {
+        const list = document.getElementById('adminSportsList');
+        if (!portalData.sports || portalData.sports.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);font-size:0.9em;">No sports teams created yet.</p>';
+            return;
+        }
+
+        list.innerHTML = portalData.sports.map((sport, i) => `
+            <div class="list-item" style="flex-direction: column; align-items: stretch; gap: 8px; border-left: 3px solid var(--primary);">
+                <div style="display:flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <span class="list-item-name" style="font-size: 1.1em; color: var(--text-light);">${sport.name} <span style="color: var(--text-muted); font-size: 0.8em;">(${sport.teamName})</span></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-warning btn-sm" onclick="jumpToEdit(${i})" style="color: #000;">✏️ Edit Details</button>
+                        <button class="btn btn-primary btn-sm" onclick="jumpToRoster(${i})">👥 Edit Members</button>
+                    </div>
+                </div>
+                <div class="list-item-meta" style="line-height: 1.6; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-top: 4px;">
+                    <strong>👑 Captain:</strong> ${sport.captain} &nbsp;|&nbsp; <strong>📋 Coach:</strong> ${sport.coach} &nbsp;|&nbsp; <strong>✉️ Contact:</strong> ${sport.contact} <br>
+                    <strong>📍 Venue:</strong> ${sport.venue} &nbsp;|&nbsp; <strong>⏰ Time:</strong> ${sport.time} <br>
+                    <strong>👥 Roster (${sport.members.length}):</strong> ${sport.members.length > 0 ? sport.members.join(', ') : '<span style="color:var(--danger)">No members added</span>'}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function jumpToEdit(idx) {
+        document.getElementById('editSportSelect').value = idx;
+        loadSportDetails();
+        document.getElementById('editSportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast('Ready to edit details.', 'success');
+        document.getElementById('editTeamName').focus();
+    }
+
+    function jumpToRoster(idx) {
+        document.getElementById('memberSportSelect').value = idx;
+        updateRosterList();
+        document.getElementById('rosterCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast('Ready to edit members.', 'success');
+        document.getElementById('memberName').focus();
+    }
+
     // ─── DROPDOWNS ───────────────────────────────────────────────────
     function populateDropdowns() {
         const editSelect   = document.getElementById('editSportSelect');
         const memberSelect = document.getElementById('memberSportSelect');
         const eventSelect  = document.getElementById('eventSportSelect');
+        const achSelect    = document.getElementById('editAchSelect');
+        
         const prevEdit     = editSelect.value;
         const prevMember   = memberSelect.value;
         const prevEvent    = eventSelect.value;
+        const prevAch      = achSelect.value;
 
+        // Populate Sports
         if (portalData.sports.length === 0) {
             const empty = '<option value="">— No sports yet —</option>';
             editSelect.innerHTML   = empty;
             memberSelect.innerHTML = empty;
             eventSelect.innerHTML  = empty;
             document.getElementById('rosterList').innerHTML = '<p style="color:var(--text-muted);font-size:0.9em;">No sports added yet.</p>';
-            return;
+        } else {
+            const options = portalData.sports.map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+            editSelect.innerHTML   = options;
+            memberSelect.innerHTML = options;
+            eventSelect.innerHTML  = options;
+
+            if (prevEdit   < portalData.sports.length) editSelect.value   = prevEdit;
+            if (prevMember < portalData.sports.length) memberSelect.value = prevMember;
+            if (prevEvent  < portalData.sports.length) eventSelect.value  = prevEvent;
         }
 
-        const options = portalData.sports.map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
-        editSelect.innerHTML   = options;
-        memberSelect.innerHTML = options;
-        eventSelect.innerHTML  = options;
-
-        if (prevEdit   < portalData.sports.length) editSelect.value   = prevEdit;
-        if (prevMember < portalData.sports.length) memberSelect.value = prevMember;
-        if (prevEvent  < portalData.sports.length) eventSelect.value  = prevEvent;
+        // Populate Achievements
+        if (portalData.achievements.length === 0) {
+            achSelect.innerHTML = '<option value="">— No achievements yet —</option>';
+        } else {
+            const achOptions = portalData.achievements.map((a, i) => `<option value="${i}">${a.title} (${a.student})</option>`).join('');
+            achSelect.innerHTML = achOptions;
+            if (prevAch < portalData.achievements.length) achSelect.value = prevAch;
+        }
 
         loadSportDetails();
         updateRosterList();
+        loadAchievementDetails();
     }
 
     // ─── CREATE SPORT ────────────────────────────────────────────────
@@ -529,7 +556,7 @@
         }
 
         rDiv.innerHTML = sport.members.map((m, i) => `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.9em;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.9em; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 6px;">
                 <span>${m}</span>
                 <button class="btn btn-danger btn-sm" onclick="removeMember(${idx},${i})">Remove</button>
             </div>
@@ -690,6 +717,102 @@
         });
     }
 
+    // ─── ACHIEVEMENTS ────────────────────────────────────────────────
+    function addAchievement() {
+        if (!validateField('achTitle', 'Achievement Title') || !validateField('achStudent', 'Student/Team Name')) return;
+
+        portalData.achievements.push({
+            title: document.getElementById('achTitle').value.trim(),
+            student: document.getElementById('achStudent').value.trim(),
+            date: document.getElementById('achDate').value.trim() || new Date().getFullYear().toString(),
+            image: document.getElementById('achImage').value.trim(),
+            description: document.getElementById('achDesc').value.trim()
+        });
+
+        ['achTitle','achStudent','achDate','achImage','achDesc'].forEach(id => document.getElementById(id).value = '');
+        
+        saveData();
+        showToast('✅ Achievement posted!', 'success');
+    }
+
+    function updateAchievementsList() {
+        const list = document.getElementById('adminAchievementsList');
+        if (!portalData.achievements || portalData.achievements.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);font-size:0.9em;">No achievements posted.</p>';
+            return;
+        }
+
+        list.innerHTML = portalData.achievements.map((ach, i) => `
+            <div class="list-item">
+                <div>
+                    <span class="list-item-name">🏅 ${ach.title}</span>
+                    <span class="list-item-meta"> — ${ach.student}</span>
+                </div>
+                <div class="list-item-controls">
+                    <button class="btn btn-warning btn-sm" onclick="jumpToEditAch(${i})" style="color: #000;">✏️ Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteAchievement(${i})">🗑 Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function jumpToEditAch(idx) {
+        document.getElementById('editAchSelect').value = idx;
+        loadAchievementDetails();
+        document.getElementById('editAchCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast('Ready to edit achievement.', 'success');
+        document.getElementById('editAchTitle').focus();
+    }
+
+    function loadAchievementDetails() {
+        const select = document.getElementById('editAchSelect');
+        if (!select) return;
+        const idx = select.value;
+        const ach = portalData.achievements[idx];
+        
+        if (!ach) {
+            ['editAchTitle', 'editAchStudent', 'editAchDate', 'editAchImage', 'editAchDesc'].forEach(id => document.getElementById(id).value = '');
+            return;
+        }
+        
+        document.getElementById('editAchTitle').value = ach.title || '';
+        document.getElementById('editAchStudent').value = ach.student || '';
+        document.getElementById('editAchDate').value = ach.date || '';
+        document.getElementById('editAchImage').value = ach.image || '';
+        document.getElementById('editAchDesc').value = ach.description || '';
+    }
+
+    function saveAchievementDetails() {
+        const idx = document.getElementById('editAchSelect').value;
+        if (idx === '' || !portalData.achievements[idx]) { showToast('⚠️ No achievement selected.', 'warning'); return; }
+        if (!validateField('editAchTitle', 'Achievement Title') || !validateField('editAchStudent', 'Student/Team Name')) return;
+
+        const ach = portalData.achievements[idx];
+        ach.title = document.getElementById('editAchTitle').value.trim();
+        ach.student = document.getElementById('editAchStudent').value.trim();
+        ach.date = document.getElementById('editAchDate').value.trim();
+        ach.image = document.getElementById('editAchImage').value.trim();
+        ach.description = document.getElementById('editAchDesc').value.trim();
+        
+        saveData();
+        showToast(`✅ "${ach.title}" updated!`, 'success');
+    }
+
+    function deleteAchievement(idx) {
+        // If clicking from the big delete button in the edit form rather than the list
+        if (idx === undefined) {
+            idx = document.getElementById('editAchSelect').value;
+        }
+        
+        if (idx === '' || !portalData.achievements[idx]) { showToast('⚠️ No achievement selected.', 'warning'); return; }
+
+        confirmAction('Delete this achievement? This cannot be undone.', () => {
+            portalData.achievements.splice(idx, 1);
+            saveData();
+            showToast('🗑️ Achievement deleted.', 'error');
+        });
+    }
+
     // ─── EXPORT / RESET ──────────────────────────────────────────────
     function exportData() {
         const blob = new Blob([JSON.stringify(portalData, null, 2)], { type: 'application/json' });
@@ -712,9 +835,11 @@
     }
 
     // ─── INIT ────────────────────────────────────────────────────────
+    updateSportsDirectory();
     populateDropdowns();
     updateEquipmentList();
     updateEventsList();
+    updateAchievementsList();
 </script>
 </body>
 </html>
